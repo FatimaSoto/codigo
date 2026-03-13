@@ -279,8 +279,104 @@
         
         .popup-custom {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            font-size: 14px;
-            line-height: 1.4;
+            line-height: 1.5;
+        }
+
+        .leaflet-popup-content {
+            max-width: 650px !important;
+            max-height: 600px !important;
+            overflow-y: auto !important;
+        }
+
+        .leaflet-popup-content-wrapper {
+            border-radius: 12px !important;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2) !important;
+        }
+
+        /* Barra de desplazamiento personalizada */
+        .leaflet-popup-content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .leaflet-popup-content::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .leaflet-popup-content::-webkit-scrollbar-thumb {
+            background: #3498db;
+            border-radius: 4px;
+        }
+
+        .leaflet-popup-content::-webkit-scrollbar-thumb:hover {
+            background: #2980b9;
+        }
+
+        /* Estilos para el modal de zoom */
+        .zoom-modal {
+            animation: fadeIn 0.3s;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            z-index: 10000;
+            cursor: zoom-out;
+            display: none;
+        }
+        
+        .zoom-modal.active {
+            display: block;
+        }
+        
+        .zoom-content {
+            position: relative;
+            width: 95%;
+            height: 95%;
+            margin: 2.5% auto;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .zoom-image {
+            max-width: 100%;
+            max-height: 90%;
+            object-fit: contain;
+            border: 3px solid white;
+            border-radius: 10px;
+            margin: auto;
+            box-shadow: 0 0 30px rgba(0,0,0,0.5);
+        }
+        
+        .zoom-title {
+            color: white;
+            font-size: 18px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .zoom-close {
+            position: absolute;
+            top: -40px;
+            right: 0;
+            color: white;
+            font-size: 30px;
+            cursor: pointer;
+            background: rgba(255,255,255,0.2);
+            padding: 5px 15px;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+        
+        .zoom-close:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
         
         .popup-title {
@@ -463,11 +559,16 @@
             .mode-selector {
                 grid-template-columns: 1fr;
             }
+
+            .leaflet-popup-content {
+                max-width: 300px !important;
+                max-height: 400px !important;
+            }
         }
 
   	/* Estilos para el control de capas base */
         .leaflet-control-layers-toggle {
-            background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48cGF0aCBkPSJNMTYgMkM4LjI2OCAyIDIgOC4yNjggMiAxNnM2LjI2OCAxNCAxNCAxNCAxNC02LjI2OCAxNC0xNFMyMy43MzIgMiAxNiAyem0wIDI2Yy02LjYxNyAwLTEyLTUuMzgzLTEyLTEyczUuMzgzLTEyIDEyLTEyIDEyIDUuMzgzIDEyIDEyLTUuMzgzIDEyLTEyIDEyeiIvPjxwYXRoIGQPSJNMTYgOGMtNC40MTggMC04IDMuNTgyLTggOHMzLjU4MiA4IDggOCA4LTMuNTgyIDgtOC0zLjU4Mi04LTgtOHptMCAxNGMtMy4zMTQgMC02LTIuNjg2LTYtNnMyLjY4Ni02IDYtNiA2IDIuNjg2IDYgNi0yLjY4NiA2LTYgNnoiLz48L3N2Zz4=') !important;
+            background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48cGF0aCBkPSJNMTYgMkM4LjI2OCAyIDIgOC4yNjggMiAxNnM2LjI2OCAxNCAxNCAxNCAxNC02LjI2OCAxNC0xNFMyMy43MzIgMiAxNiAyem0wIDI2Yy02LjYxNyAwLTEyLTUuMzgzLTEyLTEyczUuMzgzLTEyIDEyLTEyIDEyIDUuMzgzIDEyIDEyLTUuMzgzIDEyLTEyIDEyeiIvPjxwYXRoIGQ9Ik0xNiA4Yy00LjQxOCAwLTggMy41ODItOCA4czMuNTgyIDggOCA4IDgtMy41ODIgOC04LTMuNTgyLTgtOC04em0wIDE0Yy0zLjMxNCAwLTYtMi42ODYtNi02czIuNjg2LTYgNi02IDYgMi42ODYgNiA2LTIuNjg2IDYtNiA2eiIvPjwvc3ZnPg==') !important;
         }
     </style>
 </head>
@@ -723,6 +824,15 @@
         </div>
     </div>
 
+    <!-- Modal de zoom global -->
+    <div id="zoomModal" class="zoom-modal" onclick="cerrarZoomImagen(event)">
+        <div class="zoom-content">
+            <div class="zoom-title" id="zoomTitle"></div>
+            <img id="zoomImage" class="zoom-image" src="" alt="Zoom">
+            <div class="zoom-close" onclick="cerrarZoomImagen(event)">✖ Cerrar</div>
+        </div>
+    </div>
+
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
     <script>
@@ -757,6 +867,41 @@
         let currentReportMarker = null;
         let userLocationMarker = null;
         let markerClusterGroup;
+
+        // Manejador global para errores de imágenes en popups
+        window.addEventListener('error', function(e) {
+            if (e.target.tagName === 'IMG' && e.target.closest('.leaflet-popup-content')) {
+                e.target.style.display = 'none';
+                const errorMsg = document.createElement('div');
+                errorMsg.style.color = '#999';
+                errorMsg.style.padding = '5px';
+                errorMsg.style.fontSize = '12px';
+                errorMsg.textContent = '🖼️ Imagen no disponible';
+                e.target.parentNode.appendChild(errorMsg);
+            }
+        }, true);
+
+        // Función para abrir imagen en zoom
+        function abrirZoomImagen(url, titulo) {
+            const modal = document.getElementById('zoomModal');
+            const img = document.getElementById('zoomImage');
+            const title = document.getElementById('zoomTitle');
+            
+            img.src = url;
+            title.innerHTML = `📋 ${titulo}`;
+            modal.style.display = 'block';
+        }
+
+        // Función para cerrar zoom
+        function cerrarZoomImagen(event) {
+            // Si el clic fue en el modal o en el botón cerrar
+            if (event.target.id === 'zoomModal' || 
+                event.target.classList.contains('zoom-close') ||
+                event.target.classList.contains('zoom-content')) {
+                document.getElementById('zoomModal').style.display = 'none';
+            }
+            event.stopPropagation();
+        }
 
         // Función para inicializar el mapa
         function initMap() {
@@ -924,17 +1069,65 @@
             });
         }
 
-        // Función para crear el popup de intervención
+        // Función para crear el popup de intervención CON ZOOM INTERACTIVO
         function crearPopupIntervencion(item) {
-            return `
-                <div class="popup-custom">
-                    <div class="popup-title">🏗️ ${item.nombre || 'Intervención Territorial'}</div>
-                    ${item.tratamient ? `<div class="popup-field"><strong>Tratamiento:</strong> ${item.tratamient}</div>` : ''}
-                    ${item.ubicacion ? `<div class="popup-field"><strong>Ubicación:</strong> ${item.ubicacion}</div>` : ''}
-                    ${item.area ? `<div class="popup-field"><strong>Área:</strong> ${item.area}</div>` : ''}
-                    ${item.pits ? `<div class="popup-field"><strong>PITS:</strong> ${item.pits}</div>` : ''}
-                </div>
+            // Determinar la URL de la imagen basada en el campo 'pits'
+            let imagenUrl = '';
+            if (item.pits) {
+                // Extraer el número del PITS (ej: "P-39 CONSERVACION" -> "39")
+                const match = item.pits.match(/P-?(\d+)/i);
+                if (match) {
+                    const numeroPits = match[1];
+                    // Construir la URL de la imagen (codificando el nombre del archivo)
+                    const nombreArchivo = `PIT ${numeroPits}.jpg`;
+                    imagenUrl = `https://dpxlpyyelqbwudkhdtbw.supabase.co/storage/v1/object/public/pits/${encodeURIComponent(nombreArchivo)}`;
+                }
+            }
+            
+            // Construir el HTML del popup
+            let popupContent = `
+                <div class="popup-custom" style="max-width: 600px;">
+                    <div class="popup-title" style="font-size: 18px; margin-bottom: 12px; color: #1565C0; border-bottom: 2px solid #3498db; padding-bottom: 8px;">
+                        🏗️ ${item.nombre || 'Intervención Territorial'} - ${item.pits || ''}
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; background: #f8f9fa; padding: 10px; border-radius: 8px; font-size: 13px;">
+                        ${item.tratamient ? `<div><strong>Tratamiento:</strong> ${item.tratamient}</div>` : ''}
+                        ${item.ubicacion ? `<div><strong>Ubicación:</strong> ${item.ubicacion}</div>` : ''}
+                        ${item.area ? `<div><strong>Área:</strong> ${item.area}</div>` : ''}
+                    </div>
             `;
+            
+            if (imagenUrl) {
+                popupContent += `
+                    <div style="margin-top: 10px; text-align: center;">
+                        <h4 style="color: #2c3e50; margin-bottom: 10px; font-size: 14px; background: #e3f2fd; padding: 5px; border-radius: 5px;">
+                            📋 FICHA TÉCNICA - Haga clic en la imagen para ampliar
+                        </h4>
+                        <div style="position: relative; cursor: pointer; border: 2px solid #3498db; border-radius: 8px; overflow: hidden;"
+                             onclick="abrirZoomImagen('${imagenUrl}', '${item.pits || 'PITS'}')">
+                            <img src="${imagenUrl}" 
+                                 alt="Información PITS" 
+                                 style="width: 100%; height: auto; transition: transform 0.3s;"
+                                 onmouseover="this.style.transform='scale(1.02)'"
+                                 onmouseout="this.style.transform='scale(1)'"
+                                 onerror="this.onerror=null; this.parentElement.innerHTML='<div style=\'padding: 30px; color: #999;\'>🖼️ Imagen no disponible</div>';">
+                            <div style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.7); color: white; padding: 5px 10px; border-radius: 20px; font-size: 12px; pointer-events: none;">
+                                🔍 Haga clic para zoom
+                            </div>
+                        </div>
+                        <p style="margin-top: 8px; color: #666; font-size: 11px;">👆 Haga clic en la imagen para ver en tamaño completo</p>
+                    </div>
+                `;
+            } else {
+                popupContent += `
+                    <div style="margin-top: 15px; text-align: center;">
+                        <p style="color: #999;">No hay imagen disponible para este PITS</p>
+                    </div>
+                `;
+            }
+            
+            popupContent += `</div>`;
+            return popupContent;
         }
 
         // Función para configurar eventos del modo reportes
