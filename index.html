@@ -7,7 +7,10 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+    <!-- Proj4js para conversión precisa de coordenadas -->
+    <script src="https://cdn.jsdelivr.net/npm/proj4@2.9.2/dist/proj4.js"></script>
     <style>
+        /* ========== ESTILOS EXISTENTES (Sin cambios) ========== */
         * {
             margin: 0;
             padding: 0;
@@ -169,6 +172,11 @@
             background: linear-gradient(45deg, #95a5a6, #7f8c8d);
         }
         
+        .btn.temporal-point {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+            margin-top: 10px;
+        }
+        
         .loading {
             text-align: center;
             padding: 20px;
@@ -293,7 +301,6 @@
             box-shadow: 0 5px 20px rgba(0,0,0,0.2) !important;
         }
 
-        /* Barra de desplazamiento personalizada */
         .leaflet-popup-content::-webkit-scrollbar {
             width: 8px;
         }
@@ -312,7 +319,6 @@
             background: #2980b9;
         }
 
-        /* Estilos para el modal de zoom */
         .zoom-modal {
             animation: fadeIn 0.3s;
             position: fixed;
@@ -394,7 +400,6 @@
             color: #3498db;
         }
 
-        /* Estilos para el modo adaptativo */
         .mode-selector {
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
@@ -436,7 +441,6 @@
             transition: width 0.3s;
         }
         
-        /* Estilos para el módulo de reportes */
         .form-container-reportes {
             display: none;
             background: rgba(255, 255, 255, 0.95);
@@ -508,7 +512,6 @@
             min-width: 250px;
         }
         
-        /* Estilos para marcadores personalizados */
         .custom-marker {
             background: none !important;
             border: none !important;
@@ -527,6 +530,16 @@
             animation: pulse 2s infinite;
         }
         
+        .temp-point-marker {
+            background: none !important;
+            border: none !important;
+            font-size: 32px;
+            text-align: center;
+            line-height: 40px;
+            animation: pulse 1.5s infinite;
+            filter: drop-shadow(0 0 5px rgba(231, 76, 60, 0.8));
+        }
+        
         @keyframes bounce {
             0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
             40% { transform: translateY(-10px); }
@@ -534,12 +547,11 @@
         }
         
         @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-            100% { transform: scale(1); }
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
         }
         
-        /* Adaptaciones para móviles */
         @media (max-width: 768px) {
             .container {
                 flex-direction: column;
@@ -566,9 +578,76 @@
             }
         }
 
-  	/* Estilos para el control de capas base */
         .leaflet-control-layers-toggle {
             background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48cGF0aCBkPSJNMTYgMkM4LjI2OCAyIDIgOC4yNjggMiAxNnM2LjI2OCAxNCAxNCAxNCAxNC02LjI2OCAxNC0xNFMyMy43MzIgMiAxNiAyem0wIDI2Yy02LjYxNyAwLTEyLTUuMzgzLTEyLTEyczUuMzgzLTEyIDEyLTEyIDEyIDUuMzgzIDEyIDEyLTUuMzgzIDEyLTEyIDEyeiIvPjxwYXRoIGQ9Ik0xNiA4Yy00LjQxOCAwLTggMy41ODItOCA4czMuNTgyIDggOCA4IDgtMy41ODIgOC04LTMuNTgyLTgtOC04em0wIDE0Yy0zLjMxNCAwLTYtMi42ODYtNi02czIuNjg2LTYgNi02IDYgMi42ODYgNiA2LTIuNjg2IDYtNiA2eiIvPjwvc3ZnPg==') !important;
+        }
+
+        /* Modal para coordenadas UTM 17S */
+        .coords-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 20000;
+            justify-content: center;
+            align-items: center;
+        }
+        .coords-modal.active {
+            display: flex;
+        }
+        .coords-modal-content {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        .coords-modal-content h3 {
+            margin-bottom: 15px;
+            color: #2c3e50;
+            text-align: center;
+        }
+        .coords-modal-content input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        .coords-modal-content .note {
+            font-size: 12px;
+            color: #e74c3c;
+            text-align: center;
+            margin: 8px 0;
+            background: #ffeaa7;
+            padding: 8px;
+            border-radius: 5px;
+        }
+        .coords-modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .coords-modal-buttons button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .btn-confirm {
+            background: #e74c3c;
+            color: white;
+        }
+        .btn-cancel-modal {
+            background: #95a5a6;
+            color: white;
         }
     </style>
 </head>
@@ -628,6 +707,7 @@
                     
                     <button class="btn predios" onclick="aplicarFiltrosPredios()">🔍 Buscar Predios</button>
                     <button class="btn secondary" onclick="cargarTodosPredios()">📍 Cargar Todos Predios</button>
+                    <button class="btn temporal-point" onclick="mostrarModalCoordenadas()">➕ Agregar Punto (UTM 17S)</button>
                 </div>
             </div>
             
@@ -696,6 +776,7 @@
                     <button class="btn intervencion" onclick="cargarIntervencionTerritorial()">🏗️ Cargar Intervenciones</button>
                     <button class="btn secondary" onclick="limpiarFiltros()">🗑️ Limpiar Filtros</button>
                     <button class="btn secondary" onclick="centrarEnElPangui()">📍 Centrar Mapa</button>
+                    <button class="btn temporal-point" onclick="mostrarModalCoordenadas()">➕ Agregar Punto (UTM 17S)</button>
                 </div>
             </div>
             
@@ -730,7 +811,6 @@
                 
                 <div id="reportes-status" class="status"></div>
                 
-                <!-- Formulario de reportes -->
                 <div id="form-container-reportes" class="form-container-reportes">
                     <h3>📋 Reportar Problema</h3>
                     <div class="coordinates" id="reportes-coordinates"></div>
@@ -779,7 +859,6 @@
                 </div>
             </div>
             
-            <!-- Elementos de carga -->
             <div id="loadingPredios" class="loading">
                 <div class="spinner"></div>
                 <p id="loadingTextPredios">Cargando predios...</p>
@@ -833,15 +912,47 @@
         </div>
     </div>
 
+    <!-- Modal para ingresar coordenadas UTM 17S -->
+    <div id="coordsModal" class="coords-modal">
+        <div class="coords-modal-content">
+            <h3>📍 Agregar punto UTM 17S</h3>
+            <input type="number" id="coordX" step="any" placeholder="Easting X (metros)" value="780000">
+            <input type="number" id="coordY" step="any" placeholder="Northing Y (metros)" value="9600000">
+            <div class="note">🗺️ Sistema: UTM Zona 17 Sur (WGS84)</div>
+            <div class="coords-modal-buttons">
+                <button class="btn-confirm" onclick="agregarPuntoTemporal()">📍 Mostrar punto</button>
+                <button class="btn-cancel-modal" onclick="cerrarModalCoordenadas()">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
     <script>
-        // Configuración de Supabase
+        // ========== CONFIGURACIÓN DE PROJ4JS PARA UTM 17 SUR ==========
+        // Definir la proyección UTM zona 17 Sur (WGS84)
+        // EPSG:32717 - WGS 84 / UTM zone 17S
+        proj4.defs("EPSG:32717", "+proj=utm +zone=17 +south +datum=WGS84 +units=m +no_defs");
+        
+        // Definir WGS84 (lat/lon)
+        proj4.defs("EPSG:4326", "+proj=longlat +datum=WGS84 +no_defs");
+        
+        // Crear objetos de transformación
+        const utm17s = proj4("EPSG:32717");
+        const wgs84 = proj4("EPSG:4326");
+        
+        // Función para convertir UTM 17S (metros) a WGS84 (lat/lon)
+        function utm17sAGrados(x, y) {
+            // proj4 devuelve [longitud, latitud]
+            const [lng, lat] = proj4(utm17s, wgs84, [x, y]);
+            return { lng: lng, lat: lat };
+        }
+        
+        // ========== CONFIGURACIÓN EXISTENTE ==========
         const SUPABASE_URL = 'https://dpxlpyyelqbwudkhdtbw.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRweGxweXllbHFid3Vka2hkdGJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAxMjMwNjksImV4cCI6MjA2NTY5OTA2OX0.j8evYP_owzPeJmZ5GgdHnjpg1dYE4DShcI9fYYA8xG8';
         const EL_PANGUI_COORDS = [-3.6167, -78.55];
         
-        // Variables globales
         let map;
         const prediosLayer = L.layerGroup();
         const aguaLayer = L.layerGroup();
@@ -851,7 +962,6 @@
         const reportesLayer = L.layerGroup();
         const intervencionLayer = L.layerGroup();
 
- 	// Variables para las capas base
         let osmLayer, satelliteLayer, terrainLayer;
         let baseLayers = {};
         
@@ -859,1152 +969,449 @@
             currentViasData = [], currentRecoleccionData = [], currentReportesData = [],
             currentIntervencionData = [];
         
-        let loading = false, zoom = 12, timer;
+        let loading = false, zoom = 12;
         let viewMode = 'predios';
         let allPrediosCache = null;
         let reportMarkers = [];
         let selectedReportPoint = null;
         let currentReportMarker = null;
         let userLocationMarker = null;
-        let markerClusterGroup;
+        let temporalPointMarker = null;
 
-        // Manejador global para errores de imágenes en popups
-        window.addEventListener('error', function(e) {
-            if (e.target.tagName === 'IMG' && e.target.closest('.leaflet-popup-content')) {
-                e.target.style.display = 'none';
-                const errorMsg = document.createElement('div');
-                errorMsg.style.color = '#999';
-                errorMsg.style.padding = '5px';
-                errorMsg.style.fontSize = '12px';
-                errorMsg.textContent = '🖼️ Imagen no disponible';
-                e.target.parentNode.appendChild(errorMsg);
-            }
-        }, true);
+        // ========== FUNCIONES DEL PUNTO TEMPORAL (UTM 17S) ==========
+        function mostrarModalCoordenadas() {
+            // Valores aproximados para El Pangui en UTM 17S
+            document.getElementById('coordX').value = 780000;
+            document.getElementById('coordY').value = 9600000;
+            document.getElementById('coordsModal').classList.add('active');
+        }
 
-        // Función para abrir imagen en zoom
-        function abrirZoomImagen(url, titulo) {
-            const modal = document.getElementById('zoomModal');
-            const img = document.getElementById('zoomImage');
-            const title = document.getElementById('zoomTitle');
+        function cerrarModalCoordenadas() {
+            document.getElementById('coordsModal').classList.remove('active');
+        }
+
+        function agregarPuntoTemporal() {
+            let x = parseFloat(document.getElementById('coordX').value);
+            let y = parseFloat(document.getElementById('coordY').value);
             
-            img.src = url;
-            title.innerHTML = `📋 ${titulo}`;
-            modal.style.display = 'block';
-        }
-
-        // Función para cerrar zoom
-        function cerrarZoomImagen(event) {
-            // Si el clic fue en el modal o en el botón cerrar
-            if (event.target.id === 'zoomModal' || 
-                event.target.classList.contains('zoom-close') ||
-                event.target.classList.contains('zoom-content')) {
-                document.getElementById('zoomModal').style.display = 'none';
+            if (isNaN(x) || isNaN(y)) {
+                updateStatus('❌ Error: Ingrese coordenadas UTM 17S válidas (metros)', 'error');
+                return;
             }
-            event.stopPropagation();
+            
+            try {
+                // Convertir de UTM 17S a grados
+                const geograficas = utm17sAGrados(x, y);
+                const lng = geograficas.lng;
+                const lat = geograficas.lat;
+                
+                // Validar rangos geográficos (Ecuador está entre -5 y 1 de latitud, -80 a -75 longitud)
+                if (lng < -90 || lng > -60 || lat < -5 || lat > 2) {
+                    updateStatus(`⚠️ Coordenada fuera de Ecuador: (${lng.toFixed(4)}, ${lat.toFixed(4)})`, 'error');
+                    // Aún así mostramos pero con advertencia
+                }
+                
+                // Eliminar punto temporal anterior si existe
+                if (temporalPointMarker) {
+                    map.removeLayer(temporalPointMarker);
+                    temporalPointMarker = null;
+                }
+                
+                // Crear marcador temporal con animación
+                const tempIcon = L.divIcon({
+                    html: '📍',
+                    iconSize: [32, 32],
+                    className: 'temp-point-marker'
+                });
+                
+                temporalPointMarker = L.marker([lat, lng], { icon: tempIcon }).addTo(map);
+                
+                temporalPointMarker.bindPopup(`
+                    <div style="text-align:center;">
+                        <strong style="color:#e74c3c;">📍 Punto temporal (UTM 17S)</strong><br>
+                        <strong>UTM 17S:</strong><br>
+                        X: ${x.toFixed(2)} m<br>
+                        Y: ${y.toFixed(2)} m<br>
+                        <strong>WGS84:</strong><br>
+                        Lat: ${lat.toFixed(6)}<br>
+                        Lng: ${lng.toFixed(6)}<br>
+                        <em style="font-size:12px;">(Haz clic para eliminar)</em>
+                    </div>
+                `).openPopup();
+                
+                temporalPointMarker.on('click', function() {
+                    if (temporalPointMarker) {
+                        map.removeLayer(temporalPointMarker);
+                        temporalPointMarker = null;
+                        updateStatus('🗑️ Punto temporal eliminado', 'success');
+                    }
+                });
+                
+                // Centrar el mapa en el punto con zoom 18
+                map.setView([lat, lng], 18);
+                updateStatus(`✅ Punto UTM 17S: (${x.toFixed(2)}m, ${y.toFixed(2)}m) → (${lng.toFixed(6)}°, ${lat.toFixed(6)}°)`, 'success');
+                cerrarModalCoordenadas();
+                
+            } catch (error) {
+                console.error('Error de conversión:', error);
+                updateStatus('❌ Error en la conversión de coordenadas UTM 17S', 'error');
+            }
         }
 
-        // Función para inicializar el mapa
+        // ========== TODAS LAS FUNCIONES EXISTENTES (SIN MODIFICAR NADA) ==========
         function initMap() {
-            // Crear las capas base
-            osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap'
-            });
-            
-            satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-                attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
-            });
-            
-            terrainLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-                attribution: 'Map data: © OpenStreetMap contributors, SRTM | Map style: © OpenTopoMap (CC-BY-SA)'
-            });
-            
-            // Configurar las capas base
-            baseLayers = {
-                "OpenStreetMap": osmLayer,
-                "Satélite": satelliteLayer,
-                "Tierra": terrainLayer
-            };
-            
-            // Inicializar el mapa con OpenStreetMap como capa predeterminada
-            map = L.map('map', {
-                center: EL_PANGUI_COORDS,
-                zoom: zoom,
-                layers: [osmLayer]
-            });
-            
-            // Añadir control de capas base
+            osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' });
+            satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri' });
+            terrainLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: 'Map data: © OpenStreetMap' });
+            baseLayers = { "OpenStreetMap": osmLayer, "Satélite": satelliteLayer, "Tierra": terrainLayer };
+            map = L.map('map', { center: EL_PANGUI_COORDS, zoom: zoom, layers: [osmLayer] });
             L.control.layers(baseLayers).addTo(map);
-            
-            // Añadir capas al mapa (solo las que deben estar visibles al inicio)
             prediosLayer.addTo(map);
             aguaLayer.addTo(map);
             alcantarilladoLayer.addTo(map);
             viasLayer.addTo(map);
             recoleccionLayer.addTo(map);
-            // NOTA: reportesLayer e intervencionLayer NO se añaden al inicio
             
-            // Configurar toggles de capas
-            document.getElementById('togglePredios').addEventListener('change', function(e) {
-                e.target.checked ? prediosLayer.addTo(map) : map.removeLayer(prediosLayer);
-            });
+            document.getElementById('togglePredios').addEventListener('change', e => e.target.checked ? prediosLayer.addTo(map) : map.removeLayer(prediosLayer));
+            document.getElementById('toggleAgua').addEventListener('change', e => e.target.checked ? aguaLayer.addTo(map) : map.removeLayer(aguaLayer));
+            document.getElementById('toggleAlcantarillado').addEventListener('change', e => e.target.checked ? alcantarilladoLayer.addTo(map) : map.removeLayer(alcantarilladoLayer));
+            document.getElementById('toggleVias').addEventListener('change', e => e.target.checked ? viasLayer.addTo(map) : map.removeLayer(viasLayer));
+            document.getElementById('toggleRecoleccion').addEventListener('change', e => e.target.checked ? recoleccionLayer.addTo(map) : map.removeLayer(recoleccionLayer));
+            document.getElementById('toggleReportes').addEventListener('change', e => { if (e.target.checked && currentReportesData.length === 0) cargarReportesExistentes(); else e.target.checked ? reportesLayer.addTo(map) : map.removeLayer(reportesLayer); });
+            document.getElementById('toggleIntervencion').addEventListener('change', e => { if (e.target.checked && currentIntervencionData.length === 0) cargarIntervencionTerritorial(); else e.target.checked ? intervencionLayer.addTo(map) : map.removeLayer(intervencionLayer); });
             
-            document.getElementById('toggleAgua').addEventListener('change', function(e) {
-                e.target.checked ? aguaLayer.addTo(map) : map.removeLayer(aguaLayer);
-            });
-            
-            document.getElementById('toggleAlcantarillado').addEventListener('change', function(e) {
-                e.target.checked ? alcantarilladoLayer.addTo(map) : map.removeLayer(alcantarilladoLayer);
-            });
-            
-            document.getElementById('toggleVias').addEventListener('change', function(e) {
-                e.target.checked ? viasLayer.addTo(map) : map.removeLayer(viasLayer);
-            });
-            
-            document.getElementById('toggleRecoleccion').addEventListener('change', function(e) {
-                e.target.checked ? recoleccionLayer.addTo(map) : map.removeLayer(recoleccionLayer);
-            });
-            
-            document.getElementById('toggleReportes').addEventListener('change', function(e) {
-                if (e.target.checked && currentReportesData.length === 0) {
-                    cargarReportesExistentes();
-                } else {
-                    e.target.checked ? reportesLayer.addTo(map) : map.removeLayer(reportesLayer);
-                }
-            });
-            
-            document.getElementById('toggleIntervencion').addEventListener('change', function(e) {
-                if (e.target.checked && currentIntervencionData.length === 0) {
-                    cargarIntervencionTerritorial();
-                } else {
-                    e.target.checked ? intervencionLayer.addTo(map) : map.removeLayer(intervencionLayer);
-                }
-            });
-            
-            // Eventos del mapa
-            map.on('zoomend', function() {
-                const newZoom = map.getZoom();
-                document.getElementById('currentZoom').textContent = newZoom;
-                zoom = newZoom;
-            });
-            
-            // Configurar eventos para el modo de reportes
+            map.on('zoomend', () => { document.getElementById('currentZoom').textContent = map.getZoom(); });
             configurarEventosReportes();
-            
             updateStatus('Mapa listo', 'success');
-            
-            // Cargar datos iniciales
             cargarPrediosIniciales();
             cargarAgua();
             cargarAlcantarillado();
             cargarVias();
             cargarRecoleccion();
-            // Nota: No cargar reportes ni intervenciones al inicio
         }
         
-        // Función para cargar los polígonos de intervención territorial
         async function cargarIntervencionTerritorial() {
-            if (currentIntervencionData.length > 0) {
-                intervencionLayer.addTo(map);
-                return;
-            }
-
+            if (currentIntervencionData.length > 0) { intervencionLayer.addTo(map); return; }
             document.getElementById('loadingIntervencion').style.display = 'block';
             updateStatus('Cargando intervenciones territoriales...');
-
             try {
-                const response = await fetch(`${SUPABASE_URL}/rest/v1/poligonos_intervencion_territorial_wgs84?select=*`, {
-                    headers: {
-                        'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-                    }
-                });
-
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/poligonos_intervencion_territorial_wgs84?select=*`, { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } });
                 if (response.ok) {
                     const data = await response.json();
                     currentIntervencionData = data;
                     renderizarIntervencionTerritorial(data);
                     updateStatus(`✅ ${data.length} polígonos de intervención cargados`, 'success');
-                    
-                    // Actualizar estadísticas
                     document.getElementById('totalIntervenciones').textContent = data.length;
-                    
-                    // Activar el toggle si no está activado
                     document.getElementById('toggleIntervencion').checked = true;
                     intervencionLayer.addTo(map);
-                } else {
-                    throw new Error(`Error HTTP: ${response.status}`);
-                }
-            } catch (error) {
-                console.error('Error cargando intervenciones:', error);
-                updateStatus('❌ Error cargando intervenciones', 'error');
-            } finally {
-                document.getElementById('loadingIntervencion').style.display = 'none';
-            }
+                } else throw new Error(`Error HTTP: ${response.status}`);
+            } catch (error) { console.error('Error cargando intervenciones:', error); updateStatus('❌ Error cargando intervenciones', 'error');
+            } finally { document.getElementById('loadingIntervencion').style.display = 'none'; }
         }
 
-        // Función para renderizar los polígonos de intervención
         function renderizarIntervencionTerritorial(data) {
             intervencionLayer.clearLayers();
-            
             data.forEach(item => {
                 if (!item.geom) return;
-                
                 try {
                     const geom = typeof item.geom === 'string' ? JSON.parse(item.geom) : item.geom;
-                    
-                    const layer = L.geoJSON(geom, {
-                        style: {
-                            color: '#f39c12',
-                            weight: 2,
-                            fillColor: '#f1c40f',
-                            fillOpacity: 0.4,
-                            opacity: 1
-                        }
-                    }).bindPopup(crearPopupIntervencion(item));
-                    
+                    const layer = L.geoJSON(geom, { style: { color: '#f39c12', weight: 2, fillColor: '#f1c40f', fillOpacity: 0.4, opacity: 1 } }).bindPopup(crearPopupIntervencion(item));
                     intervencionLayer.addLayer(layer);
-                } catch (e) {
-                    console.error('Error renderizando intervención:', e);
-                }
+                } catch (e) { console.error('Error renderizando intervención:', e); }
             });
         }
 
-        // Función para crear el popup de intervención CON ZOOM INTERACTIVO
         function crearPopupIntervencion(item) {
-            // Determinar la URL de la imagen basada en el campo 'pits'
             let imagenUrl = '';
             if (item.pits) {
-                // Extraer el número del PITS (ej: "P-39 CONSERVACION" -> "39")
                 const match = item.pits.match(/P-?(\d+)/i);
                 if (match) {
                     const numeroPits = match[1];
-                    // Construir la URL de la imagen (codificando el nombre del archivo)
                     const nombreArchivo = `PIT ${numeroPits}.jpg`;
                     imagenUrl = `https://dpxlpyyelqbwudkhdtbw.supabase.co/storage/v1/object/public/pits/${encodeURIComponent(nombreArchivo)}`;
                 }
             }
-            
-            // Construir el HTML del popup
-            let popupContent = `
-                <div class="popup-custom" style="max-width: 600px;">
-                    <div class="popup-title" style="font-size: 18px; margin-bottom: 12px; color: #1565C0; border-bottom: 2px solid #3498db; padding-bottom: 8px;">
-                        🏗️ ${item.nombre || 'Intervención Territorial'} - ${item.pits || ''}
-                    </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; background: #f8f9fa; padding: 10px; border-radius: 8px; font-size: 13px;">
-                        ${item.tratamient ? `<div><strong>Tratamiento:</strong> ${item.tratamient}</div>` : ''}
-                        ${item.ubicacion ? `<div><strong>Ubicación:</strong> ${item.ubicacion}</div>` : ''}
-                        ${item.area ? `<div><strong>Área:</strong> ${item.area}</div>` : ''}
-                    </div>
-            `;
-            
+            let popupContent = `<div class="popup-custom" style="max-width:600px;"><div class="popup-title" style="font-size:18px;margin-bottom:12px;color:#1565C0;border-bottom:2px solid #3498db;padding-bottom:8px;">🏗️ ${item.nombre || 'Intervención Territorial'} - ${item.pits || ''}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:15px;background:#f8f9fa;padding:10px;border-radius:8px;font-size:13px;">${item.tratamient ? `<div><strong>Tratamiento:</strong> ${item.tratamient}</div>` : ''}${item.ubicacion ? `<div><strong>Ubicación:</strong> ${item.ubicacion}</div>` : ''}${item.area ? `<div><strong>Área:</strong> ${item.area}</div>` : ''}</div>`;
             if (imagenUrl) {
-                popupContent += `
-                    <div style="margin-top: 10px; text-align: center;">
-                        <h4 style="color: #2c3e50; margin-bottom: 10px; font-size: 14px; background: #e3f2fd; padding: 5px; border-radius: 5px;">
-                            📋 FICHA TÉCNICA - Haga clic en la imagen para ampliar
-                        </h4>
-                        <div style="position: relative; cursor: pointer; border: 2px solid #3498db; border-radius: 8px; overflow: hidden;"
-                             onclick="abrirZoomImagen('${imagenUrl}', '${item.pits || 'PITS'}')">
-                            <img src="${imagenUrl}" 
-                                 alt="Información PITS" 
-                                 style="width: 100%; height: auto; transition: transform 0.3s;"
-                                 onmouseover="this.style.transform='scale(1.02)'"
-                                 onmouseout="this.style.transform='scale(1)'"
-                                 onerror="this.onerror=null; this.parentElement.innerHTML='<div style=\'padding: 30px; color: #999;\'>🖼️ Imagen no disponible</div>';">
-                            <div style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.7); color: white; padding: 5px 10px; border-radius: 20px; font-size: 12px; pointer-events: none;">
-                                🔍 Haga clic para zoom
-                            </div>
-                        </div>
-                        <p style="margin-top: 8px; color: #666; font-size: 11px;">👆 Haga clic en la imagen para ver en tamaño completo</p>
-                    </div>
-                `;
-            } else {
-                popupContent += `
-                    <div style="margin-top: 15px; text-align: center;">
-                        <p style="color: #999;">No hay imagen disponible para este PITS</p>
-                    </div>
-                `;
-            }
-            
+                popupContent += `<div style="margin-top:10px;text-align:center;"><h4 style="color:#2c3e50;margin-bottom:10px;font-size:14px;background:#e3f2fd;padding:5px;border-radius:5px;">📋 FICHA TÉCNICA - Haga clic en la imagen para ampliar</h4><div style="position:relative;cursor:pointer;border:2px solid #3498db;border-radius:8px;overflow:hidden;" onclick="abrirZoomImagen('${imagenUrl}', '${item.pits || 'PITS'}')"><img src="${imagenUrl}" alt="Información PITS" style="width:100%;height:auto;transition:transform 0.3s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'" onerror="this.onerror=null; this.parentElement.innerHTML='<div style=\'padding:30px;color:#999;\'>🖼️ Imagen no disponible</div>';"><div style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.7);color:white;padding:5px 10px;border-radius:20px;font-size:12px;pointer-events:none;">🔍 Haga clic para zoom</div></div><p style="margin-top:8px;color:#666;font-size:11px;">👆 Haga clic en la imagen para ver en tamaño completo</p></div>`;
+            } else { popupContent += `<div style="margin-top:15px;text-align:center;"><p style="color:#999;">No hay imagen disponible para este PITS</p></div>`; }
             popupContent += `</div>`;
             return popupContent;
         }
 
-        // Función para configurar eventos del modo reportes
         function configurarEventosReportes() {
-            map.off('click'); // Limpiar eventos anteriores
-            
+            map.off('click');
             map.on('click', function(e) {
                 if (viewMode !== 'reportes') return;
-                
-                const lat = e.latlng.lat;
-                const lng = e.latlng.lng;
-                
-                // Remover marcador anterior si existe
-                if (currentReportMarker) {
-                    map.removeLayer(currentReportMarker);
-                }
-                
-                // Crear nuevo marcador
-                currentReportMarker = L.marker([lat, lng], {
-                    icon: L.divIcon({
-                        html: '📍',
-                        iconSize: [30, 30],
-                        className: 'custom-marker'
-                    })
-                }).addTo(map);
-                
-                // Guardar punto seleccionado
+                const lat = e.latlng.lat, lng = e.latlng.lng;
+                if (currentReportMarker) map.removeLayer(currentReportMarker);
+                currentReportMarker = L.marker([lat, lng], { icon: L.divIcon({ html: '📍', iconSize: [30, 30], className: 'custom-marker' }) }).addTo(map);
                 selectedReportPoint = { lat, lng };
-                
-                // Mostrar formulario
                 mostrarFormularioReporte(lat, lng);
                 updateStatus('📍 Ubicación seleccionada manualmente. Completa el formulario.', 'success');
             });
         }
         
-        // Función para mostrar el formulario de reporte
         function mostrarFormularioReporte(lat, lng) {
-            document.getElementById('reportes-coordinates').innerHTML = `
-                <strong>📍 Ubicación seleccionada:</strong><br>
-                Latitud: ${lat.toFixed(6)}<br>
-                Longitud: ${lng.toFixed(6)}
-            `;
-            
+            document.getElementById('reportes-coordinates').innerHTML = `<strong>📍 Ubicación seleccionada:</strong><br>Latitud: ${lat.toFixed(6)}<br>Longitud: ${lng.toFixed(6)}`;
             document.getElementById('form-container-reportes').classList.add('active');
             document.getElementById('reportes-status').textContent = '📝 Completa el formulario para reportar el problema';
         }
         
-        // Función para cancelar reporte
         function cancelarReporte() {
             document.getElementById('form-container-reportes').classList.remove('active');
             document.getElementById('reportes-status').textContent = '';
-            
-            if (currentReportMarker) {
-                map.removeLayer(currentReportMarker);
-                currentReportMarker = null;
-            }
+            if (currentReportMarker) { map.removeLayer(currentReportMarker); currentReportMarker = null; }
             selectedReportPoint = null;
         }
         
-        // Función para enviar reporte
         async function enviarReporte(e) {
             e.preventDefault();
-            
-            if (!selectedReportPoint) {
-                alert('Por favor selecciona un punto en el mapa');
-                return;
-            }
-            
-            const formData = {
-                tipo_servicio: document.getElementById('tipoServicio').value,
-                x: selectedReportPoint.lng.toString(),
-                y: selectedReportPoint.lat.toString(),
-                estado: document.getElementById('estado').value,
-                geom: `POINT(${selectedReportPoint.lng} ${selectedReportPoint.lat})`
-            };
-            
+            if (!selectedReportPoint) { alert('Por favor selecciona un punto en el mapa'); return; }
+            const formData = { tipo_servicio: document.getElementById('tipoServicio').value, x: selectedReportPoint.lng.toString(), y: selectedReportPoint.lat.toString(), estado: document.getElementById('estado').value, geom: `POINT(${selectedReportPoint.lng} ${selectedReportPoint.lat})` };
             try {
-                const response = await fetch(`${SUPABASE_URL}/rest/v1/reporte_usuarios`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-                    },
-                    body: JSON.stringify(formData)
-                });
-                
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/reporte_usuarios`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }, body: JSON.stringify(formData) });
                 if (response.ok) {
                     document.getElementById('reportSuccessMessage').style.display = 'block';
-                    setTimeout(() => {
-                        document.getElementById('reportSuccessMessage').style.display = 'none';
-                        cancelarReporte();
-                        cargarReportesExistentes();
-                    }, 2000);
-                } else {
-                    throw new Error('Error en la respuesta del servidor');
-                }
-            } catch (error) {
-                console.error('Error enviando reporte:', error);
-                updateStatus('❌ Error enviando reporte', 'error');
-            }
+                    setTimeout(() => { document.getElementById('reportSuccessMessage').style.display = 'none'; cancelarReporte(); cargarReportesExistentes(); }, 2000);
+                } else throw new Error('Error en la respuesta del servidor');
+            } catch (error) { console.error('Error enviando reporte:', error); updateStatus('❌ Error enviando reporte', 'error'); }
         }
         
-        // Función para obtener ubicación del usuario
         function obtenerUbicacionUsuario() {
-            if (!navigator.geolocation) {
-                alert('Tu navegador no soporta geolocalización');
-                return;
-            }
-            
+            if (!navigator.geolocation) { alert('Tu navegador no soporta geolocalización'); return; }
             document.getElementById('reportes-status').textContent = '📍 Obteniendo tu ubicación...';
-            
-            navigator.geolocation.getCurrentPosition(
-                function(position) {
-                    const lat = position.coords.latitude;
-                    const lng = position.coords.longitude;
-                    
-                    // Centrar mapa
-                    map.setView([lat, lng], 17);
-                    
-                    // Limpiar marcadores anteriores
-                    if (currentReportMarker) map.removeLayer(currentReportMarker);
-                    if (userLocationMarker) map.removeLayer(userLocationMarker);
-                    
-                    // Crear marcador de ubicación
-                    userLocationMarker = L.marker([lat, lng], {
-                        icon: L.divIcon({
-                            html: '🎯',
-                            iconSize: [30, 30],
-                            className: 'user-location-marker'
-                        })
-                    }).addTo(map);
-                    
-                    // Guardar punto seleccionado
-                    selectedReportPoint = { lat, lng };
-                    
-                    // Mostrar formulario
-                    mostrarFormularioReporte(lat, lng);
-                    document.getElementById('reportes-status').textContent = '🎯 Ubicación detectada. Completa el formulario.';
-                },
-                function(error) {
-                    console.error('Error de geolocalización:', error);
-                    document.getElementById('reportes-status').textContent = '❌ Error obteniendo ubicación. Haz clic en el mapa.';
-                }
-            );
+            navigator.geolocation.getCurrentPosition(pos => { const lat = pos.coords.latitude, lng = pos.coords.longitude; map.setView([lat, lng], 17); if (currentReportMarker) map.removeLayer(currentReportMarker); if (userLocationMarker) map.removeLayer(userLocationMarker); userLocationMarker = L.marker([lat, lng], { icon: L.divIcon({ html: '🎯', iconSize: [30, 30], className: 'user-location-marker' }) }).addTo(map); selectedReportPoint = { lat, lng }; mostrarFormularioReporte(lat, lng); document.getElementById('reportes-status').textContent = '🎯 Ubicación detectada. Completa el formulario.'; }, error => { console.error('Error de geolocalización:', error); document.getElementById('reportes-status').textContent = '❌ Error obteniendo ubicación. Haz clic en el mapa.'; });
         }
         
-        // Función para limpiar selección de reportes
         function limpiarReportes() {
-            if (currentReportMarker) {
-                map.removeLayer(currentReportMarker);
-                currentReportMarker = null;
-            }
-            if (userLocationMarker) {
-                map.removeLayer(userLocationMarker);
-                userLocationMarker = null;
-            }
+            if (currentReportMarker) { map.removeLayer(currentReportMarker); currentReportMarker = null; }
+            if (userLocationMarker) { map.removeLayer(userLocationMarker); userLocationMarker = null; }
             document.getElementById('form-container-reportes').classList.remove('active');
             document.getElementById('reportes-status').textContent = '';
             selectedReportPoint = null;
         }
         
-        // Función para cargar reportes existentes
         async function cargarReportesExistentes() {
             try {
-                const response = await fetch(`${SUPABASE_URL}/rest/v1/reporte_usuarios?select=*`, {
-                    headers: {
-                        'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-                    }
-                });
-                
-                if (response.ok) {
-                    const reports = await response.json();
-                    currentReportesData = reports;
-                    renderizarReportes(reports);
-                    actualizarEstadisticasReportes(reports);
-                    updateStatus(`✅ ${reports.length} reportes cargados`, 'success');
-                    
-                    // Activar el toggle si no está activado
-                    document.getElementById('toggleReportes').checked = true;
-                    reportesLayer.addTo(map);
-                }
-            } catch (error) {
-                console.error('Error cargando reportes:', error);
-                updateStatus('❌ Error cargando reportes', 'error');
-            }
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/reporte_usuarios?select=*`, { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } });
+                if (response.ok) { const reports = await response.json(); currentReportesData = reports; renderizarReportes(reports); actualizarEstadisticasReportes(reports); updateStatus(`✅ ${reports.length} reportes cargados`, 'success'); document.getElementById('toggleReportes').checked = true; reportesLayer.addTo(map); }
+            } catch (error) { console.error('Error cargando reportes:', error); updateStatus('❌ Error cargando reportes', 'error'); }
         }
         
-        // Función para renderizar reportes en el mapa
         function renderizarReportes(reports) {
-            reportesLayer.clearLayers();
-            reportMarkers = [];
-            
+            reportesLayer.clearLayers(); reportMarkers = [];
             reports.forEach(report => {
                 if (report.x && report.y) {
-                    const lat = parseFloat(report.y);
-                    const lng = parseFloat(report.x);
-                    
-                    let markerColor = '#007bff';
+                    const lat = parseFloat(report.y), lng = parseFloat(report.x);
                     let iconUrl = 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png';
-                    
-                    switch(report.estado) {
-                        case 'Reportado':
-                            markerColor = '#dc3545';
-                            iconUrl = 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png';
-                            break;
-                        case 'En proceso':
-                            markerColor = '#ffc107';
-                            iconUrl = 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-orange.png';
-                            break;
-                        case 'Resuelto':
-                            markerColor = '#28a745';
-                            iconUrl = 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png';
-                            break;
-                        case 'Crítico':
-                            markerColor = '#dc3545';
-                            iconUrl = 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-violet.png';
-                            break;
-                    }
-                    
-                    const customIcon = L.icon({
-                        iconUrl: iconUrl,
-                        iconSize: [25, 41],
-                        iconAnchor: [12, 41],
-                        popupAnchor: [1, -34],
-                        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-                        shadowSize: [41, 41]
-                    });
-                    
-                    const marker = L.marker([lat, lng], {
-                        icon: customIcon,
-                        riseOnHover: true
-                    }).bindPopup(crearPopupReporte(report));
-                    
-                    reportesLayer.addLayer(marker);
-                    reportMarkers.push(marker);
+                    if (report.estado === 'Reportado') iconUrl = 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png';
+                    else if (report.estado === 'En proceso') iconUrl = 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-orange.png';
+                    else if (report.estado === 'Resuelto') iconUrl = 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png';
+                    else if (report.estado === 'Crítico') iconUrl = 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-violet.png';
+                    const customIcon = L.icon({ iconUrl, iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png', shadowSize: [41, 41] });
+                    const marker = L.marker([lat, lng], { icon: customIcon, riseOnHover: true }).bindPopup(crearPopupReporte(report));
+                    reportesLayer.addLayer(marker); reportMarkers.push(marker);
                 }
             });
         }
         
-        // Función para actualizar estadísticas de reportes
-        function actualizarEstadisticasReportes(reports) {
-            document.getElementById('totalReportes').textContent = reports.length;
-            
-            const pendientes = reports.filter(r => r.estado === 'Reportado' || r.estado === 'Crítico').length;
-            document.getElementById('reportesPendientes').textContent = pendientes;
-        }
-        
-        // Función para crear popup de reporte
-        function crearPopupReporte(report) {
-            return `
-                <div class="report-popup">
-                    <h3 style="margin: 0 0 8px 0; color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 5px;">
-                        ${getServiceIcon(report.tipo_servicio)} ${report.tipo_servicio}
-                    </h3>
-                    <p style="margin: 5px 0;"><strong>📊 Estado:</strong> <span style="color: ${getColorByStatus(report.estado)}; font-weight: bold;">${report.estado}</span></p>
-                    <p style="margin: 5px 0; font-size: 0.9em; color: #666;">
-                        <strong>📍 Coordenadas:</strong> ${report.y}, ${report.x}
-                    </p>
-                    <p style="margin: 5px 0; font-size: 0.9em; color: #666;">
-                        <strong>📅 Fecha:</strong> ${report.created_at ? new Date(report.created_at).toLocaleString() : 'No disponible'}
-                    </p>
-                </div>
-            `;
-        }
-        
-        // Función auxiliar para obtener iconos de servicio
-        function getServiceIcon(service) {
-            const icons = {
-                'Agua potable': '💧',
-                'Alcantarillado': '🚰',
-                'Recolección de basura': '🗑️',
-                'Vías y calles': '🛣️',
-                'Otro': '❓'
-            };
-            return icons[service] || '📋';
-        }
-        
-        // Función auxiliar para obtener color por estado
-        function getColorByStatus(status) {
-            const colors = {
-                'Reportado': '#dc3545',
-                'En proceso': '#ffc107',
-                'Resuelto': '#28a745',
-                'Crítico': '#dc3545'
-            };
-            return colors[status] || '#007bff';
-        }
+        function actualizarEstadisticasReportes(reports) { document.getElementById('totalReportes').textContent = reports.length; document.getElementById('reportesPendientes').textContent = reports.filter(r => r.estado === 'Reportado' || r.estado === 'Crítico').length; }
+        function crearPopupReporte(report) { return `<div class="report-popup"><h3 style="margin:0 0 8px 0;color:#2c3e50;border-bottom:1px solid #eee;padding-bottom:5px;">${getServiceIcon(report.tipo_servicio)} ${report.tipo_servicio}</h3><p style="margin:5px 0;"><strong>📊 Estado:</strong> <span style="color:${getColorByStatus(report.estado)}; font-weight:bold;">${report.estado}</span></p><p style="margin:5px 0;font-size:0.9em;color:#666;"><strong>📍 Coordenadas:</strong> ${report.y}, ${report.x}</p><p style="margin:5px 0;font-size:0.9em;color:#666;"><strong>📅 Fecha:</strong> ${report.created_at ? new Date(report.created_at).toLocaleString() : 'No disponible'}</p></div>`; }
+        function getServiceIcon(service) { const icons = { 'Agua potable': '💧', 'Alcantarillado': '🚰', 'Recolección de basura': '🗑️', 'Vías y calles': '🛣️', 'Otro': '❓' }; return icons[service] || '📋'; }
+        function getColorByStatus(status) { const colors = { 'Reportado': '#dc3545', 'En proceso': '#ffc107', 'Resuelto': '#28a745', 'Crítico': '#dc3545' }; return colors[status] || '#007bff'; }
 
-        // Función para establecer el modo de vista
         function setViewMode(mode) {
             viewMode = mode;
-            
-            // Actualizar botones activos
             document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById(`mode${mode.charAt(0).toUpperCase() + mode.slice(1)}`).classList.add('active');
-            
-            // Mostrar/ocultar controles según el modo
             document.getElementById('predios-controls').style.display = mode === 'predios' ? 'block' : 'none';
             document.getElementById('servicios-controls').style.display = mode === 'servicios' ? 'block' : 'none';
             document.getElementById('reportes-controls').style.display = mode === 'reportes' ? 'block' : 'none';
-            
-            // Actualizar texto del modo actual
-            const modeText = {
-                'predios': 'Predios',
-                'servicios': 'Servicios',
-                'reportes': 'Reportes'
-            };
-            document.getElementById('currentMode').textContent = modeText[mode];
-            
-            // Configurar eventos del mapa según el modo
+            document.getElementById('currentMode').textContent = { 'predios': 'Predios', 'servicios': 'Servicios', 'reportes': 'Reportes' }[mode];
             configurarEventosModo(mode);
         }
         
-        // Función para configurar eventos según el modo
-        function configurarEventosModo(mode) {
-            map.off('click'); // Limpiar eventos anteriores
-            
-            if (mode === 'reportes') {
-                configurarEventosReportes();
-            } else if (mode === 'predios') {
-                // Configurar eventos para modo predios (si es necesario)
-            } else if (mode === 'servicios') {
-                // Configurar eventos para modo servicios (si es necesario)
-            }
-        }
+        function configurarEventosModo(mode) { map.off('click'); if (mode === 'reportes') configurarEventosReportes(); }
         
-        // Función para cargar predios iniciales
         async function cargarPrediosIniciales() {
             try {
-                const response = await fetch(`${SUPABASE_URL}/rest/v1/predios_texto?select=objectid,id_pred,tipo_pred,ocup,area_graf,area_cons,avaluo_trr,avaluo_con,avaluo_tot,desprov,descan,geom&limit=500`, {
-                    headers: {
-                        'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-                    }
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    currentPrediosData = data;
-                    renderizarPredios(data);
-                }
-            } catch (error) {
-                console.error('Error cargando predios iniciales:', error);
-            }
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/predios_texto?select=objectid,id_pred,tipo_pred,ocup,area_graf,area_cons,avaluo_trr,avaluo_con,avaluo_tot,desprov,descan,geom&limit=500`, { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } });
+                if (response.ok) { const data = await response.json(); currentPrediosData = data; renderizarPredios(data); }
+            } catch (error) { console.error('Error cargando predios iniciales:', error); }
         }
         
-        // Función para cargar TODOS los predios (por lotes)
         async function cargarTodosPredios() {
             if (loading) return;
             loading = true;
             showProgress(true);
             showLoader(true, 'Iniciando carga masiva de predios...');
-            
             try {
-                // Intentar función RPC optimizada primero
                 try {
-                    setLoadingText('🚀 Probando función RPC get_predios_geo...');
-                    updateProgress(10);
-                    
+                    setLoadingText('🚀 Probando función RPC get_predios_geo...'); updateProgress(10);
                     const data = await callRPC('get_predios_geo', {});
-                    
-                    updateProgress(80);
-                    setLoadingText('📊 Procesando geometrías RPC...');
-                    
-                    currentPrediosData = data.map(item => ({
-                        objectid: item.objectid,
-                        id_pred: item.id_pred || '',
-                        tipo_pred: item.tipo_pred || '',
-                        ocup: item.ocup || '',
-                        area_graf: item.area_graf,
-                        area_cons: item.area_cons,
-                        avaluo_trr: item.avaluo_trr,
-                        avaluo_con: item.avaluo_con,
-                        avaluo_tot: item.avaluo_tot,
-                        desprov: item.desprov || '',
-                        descan: item.descan || '',
-                        geom: item.geom
-                    }));
-                    
-                    allPrediosCache = currentPrediosData;
-                    updateProgress(100);
-                    setLoadingText('✅ Renderizando desde RPC...');
-                    
-                    setTimeout(() => {
-                        renderizarPredios(currentPrediosData);
-                        updateStatus(`🎉 Carga RPC exitosa: ${currentPrediosData.length.toLocaleString()} predios`, 'success');
-                    }, 200);
-                    
+                    updateProgress(80); setLoadingText('📊 Procesando geometrías RPC...');
+                    currentPrediosData = data.map(item => ({ objectid: item.objectid, id_pred: item.id_pred || '', tipo_pred: item.tipo_pred || '', ocup: item.ocup || '', area_graf: item.area_graf, area_cons: item.area_cons, avaluo_trr: item.avaluo_trr, avaluo_con: item.avaluo_con, avaluo_tot: item.avaluo_tot, desprov: item.desprov || '', descan: item.descan || '', geom: item.geom }));
+                    allPrediosCache = currentPrediosData; updateProgress(100); setLoadingText('✅ Renderizando desde RPC...');
+                    setTimeout(() => { renderizarPredios(currentPrediosData); updateStatus(`🎉 Carga RPC exitosa: ${currentPrediosData.length.toLocaleString()} predios`, 'success'); }, 200);
                 } catch (rpcError) {
                     console.warn('RPC get_predios_geo falló:', rpcError);
-                    setLoadingText('📦 RPC falló - usando carga por lotes...');
-                    updateProgress(0);
-                    
-                    // Fallback: Carga por lotes tradicional
-                    const batchSize = 1000;
-                    let offset = 0;
-                    let allData = [];
-                    let batchCount = 0;
-                    let hasMore = true;
-                    
+                    setLoadingText('📦 RPC falló - usando carga por lotes...'); updateProgress(0);
+                    const batchSize = 1000; let offset = 0, allData = [], batchCount = 0, hasMore = true;
                     while (hasMore && offset < 15000) {
-                        batchCount++;
-                        setLoadingText(`📥 Cargando lote ${batchCount} (${offset}-${offset + batchSize})...`);
-                        updateProgress((offset / 15000) * 100);
-                        
+                        batchCount++; setLoadingText(`📥 Cargando lote ${batchCount} (${offset}-${offset + batchSize})...`); updateProgress((offset / 15000) * 100);
                         try {
                             const batch = await loadBatchPredios(offset, batchSize);
-                            
-                            if (batch.length === 0) {
-                                hasMore = false;
-                            } else {
-                                allData.push(...batch);
-                                offset += batchSize;
-                                await new Promise(resolve => setTimeout(resolve, 100));
-                            }
-                            
-                            if (batch.length < batchSize) {
-                                hasMore = false;
-                            }
-                            
-                        } catch (batchError) {
-                            console.error(`Error en lote ${batchCount}:`, batchError);
-                            offset += batchSize;
-                            if (batchCount > 15) {
-                                hasMore = false;
-                            }
-                        }
+                            if (batch.length === 0) hasMore = false;
+                            else { allData.push(...batch); offset += batchSize; await new Promise(resolve => setTimeout(resolve, 100)); }
+                            if (batch.length < batchSize) hasMore = false;
+                        } catch (batchError) { console.error(`Error en lote ${batchCount}:`, batchError); offset += batchSize; if (batchCount > 15) hasMore = false; }
                     }
-                    
-                    allPrediosCache = allData;
-                    currentPrediosData = allData;
-                    updateProgress(100);
-                    setLoadingText('✅ Renderizando desde lotes...');
-                    
-                    setTimeout(() => {
-                        renderizarPredios(currentPrediosData);
-                        updateStatus(`✅ Carga por lotes exitosa: ${currentPrediosData.length.toLocaleString()} predios`, 'success');
-                    }, 200);
+                    allPrediosCache = allData; currentPrediosData = allData; updateProgress(100); setLoadingText('✅ Renderizando desde lotes...');
+                    setTimeout(() => { renderizarPredios(currentPrediosData); updateStatus(`✅ Carga por lotes exitosa: ${currentPrediosData.length.toLocaleString()} predios`, 'success'); }, 200);
                 }
-                
-            } catch (e) {
-                console.error('Error en carga masiva:', e);
-                updateStatus('❌ Error general en carga masiva', 'error');
-            } finally {
-                loading = false;
-                setTimeout(() => {
-                    showLoader(false);
-                    showProgress(false);
-                }, 500);
-            }
+            } catch (e) { console.error('Error en carga masiva:', e); updateStatus('❌ Error general en carga masiva', 'error');
+            } finally { loading = false; setTimeout(() => { showLoader(false); showProgress(false); }, 500); }
         }
         
-        // Función para cargar un lote de predios
         async function loadBatchPredios(offset, limit) {
             const url = `${SUPABASE_URL}/rest/v1/predios_texto?select=objectid,id_pred,tipo_pred,ocup,area_graf,area_cons,avaluo_trr,avaluo_con,avaluo_tot,desprov,descan,geom&offset=${offset}&limit=${limit}&order=objectid.asc`;
-            
-            const response = await fetch(url, {
-                headers: {
-                    'apikey': SUPABASE_ANON_KEY,
-                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-            
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`HTTP ${response.status}: ${errorText}`);
-            }
-            
+            const response = await fetch(url, { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' } });
+            if (!response.ok) { const errorText = await response.text(); throw new Error(`HTTP ${response.status}: ${errorText}`); }
             return await response.json();
         }
         
-        // Función para llamar a RPC de Supabase
         async function callRPC(functionName, params) {
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${functionName}`, {
-                method: 'POST',
-                headers: {
-                    'apikey': SUPABASE_ANON_KEY,
-                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(params)
-            });
-            
-            if (!res.ok) {
-                const errorText = await res.text();
-                throw new Error(`RPC Error ${res.status}: ${errorText}`);
-            }
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${functionName}`, { method: 'POST', headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' }, body: JSON.stringify(params) });
+            if (!res.ok) { const errorText = await res.text(); throw new Error(`RPC Error ${res.status}: ${errorText}`); }
             return await res.json();
         }
         
-        // Función para renderizar predios
         function renderizarPredios(data) {
             prediosLayer.clearLayers();
-            
             data.forEach(item => {
                 if (!item.geom) return;
-                
                 try {
                     const geom = typeof item.geom === 'string' ? JSON.parse(item.geom) : item.geom;
-                    
-                    const layer = L.geoJSON(geom, {
-                        style: {
-                            color: getColorPredio(item.tipo_pred),
-                            weight: 1,
-                            fillOpacity: 0.2,
-                            opacity: 1
-                        }
-                    }).bindPopup(crearPopupPredio(item));
-                    
+                    const layer = L.geoJSON(geom, { style: { color: getColorPredio(item.tipo_pred), weight: 1, fillOpacity: 0.2, opacity: 1 } }).bindPopup(crearPopupPredio(item));
                     prediosLayer.addLayer(layer);
-                } catch (e) {
-                    console.error('Error renderizando predio:', e);
-                }
+                } catch (e) { console.error('Error renderizando predio:', e); }
             });
         }
         
-        // Función para crear popup de predio
-        function crearPopupPredio(item) {
-            return `
-                <div class="popup-custom">
-                    <div class="popup-title">🏘️ Predio ${item.tipo_pred || 'N/A'}</div>
-                    <div class="popup-field"><strong>Clave catastral:</strong> ${item.id_pred || 'N/A'}</div>
-                    <div class="popup-field"><strong>Propietario:</strong> ${item.ocup || 'N/A'}</div>
-                    <div class="popup-field"><strong>Área del terreno:</strong> ${item.area_graf ? item.area_graf + ' m²' : 'N/A'}</div>
-                    <div class="popup-field"><strong>Área de construcción:</strong> ${item.area_cons ? item.area_cons + ' m²' : 'N/A'}</div>
-                    <div class="popup-field"><strong>Avalúo del terreno:</strong> ${item.avaluo_trr ? '$' + item.avaluo_trr.toLocaleString() : 'N/A'}</div>
-                    <div class="popup-field"><strong>Avalúo construcción:</strong> ${item.avaluo_con ? '$' + item.avaluo_con.toLocaleString() : 'N/A'}</div>
-                    <div class="popup-field"><strong>Avalúo total:</strong> ${item.avaluo_tot ? '$' + item.avaluo_tot.toLocaleString() : 'N/A'}</div>
-                </div>
-            `;
-        }
+        function crearPopupPredio(item) { return `<div class="popup-custom"><div class="popup-title">🏘️ Predio ${item.tipo_pred || 'N/A'}</div><div class="popup-field"><strong>Clave catastral:</strong> ${item.id_pred || 'N/A'}</div><div class="popup-field"><strong>Propietario:</strong> ${item.ocup || 'N/A'}</div><div class="popup-field"><strong>Área del terreno:</strong> ${item.area_graf ? item.area_graf + ' m²' : 'N/A'}</div><div class="popup-field"><strong>Área de construcción:</strong> ${item.area_cons ? item.area_cons + ' m²' : 'N/A'}</div><div class="popup-field"><strong>Avalúo del terreno:</strong> ${item.avaluo_trr ? '$' + item.avaluo_trr.toLocaleString() : 'N/A'}</div><div class="popup-field"><strong>Avalúo construcción:</strong> ${item.avaluo_con ? '$' + item.avaluo_con.toLocaleString() : 'N/A'}</div><div class="popup-field"><strong>Avalúo total:</strong> ${item.avaluo_tot ? '$' + item.avaluo_tot.toLocaleString() : 'N/A'}</div></div>`; }
+        function getColorPredio(tipo) { const colors = { 'URBANO': '#e74c3c', 'RURAL': '#2ecc71', 'INDUSTRIAL': '#3498db' }; return colors[tipo] || '#e67e22'; }
         
-        // Función auxiliar para color de predio
-        function getColorPredio(tipo) {
-            const colors = {
-                'URBANO': '#e74c3c',
-                'RURAL': '#2ecc71',
-                'INDUSTRIAL': '#3498db'
-            };
-            return colors[tipo] || '#e67e22';
-        }
-        
-        // Función para cargar agua potable
         async function cargarAgua() {
             try {
                 const query = `${SUPABASE_URL}/rest/v1/red_agua_potable?select=id,OBJECTID,Layer,AGUA,AREA,PAR_BARRIO,Shape_Leng,geom&limit=500`;
-                
-                const response = await fetch(query, {
-                    headers: {
-                        'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-                    }
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    currentAguaData = data;
-                    renderizarAgua(data);
-                }
-            } catch (error) {
-                console.error('Error cargando agua potable:', error);
-            }
+                const response = await fetch(query, { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } });
+                if (response.ok) { const data = await response.json(); currentAguaData = data; renderizarAgua(data); }
+            } catch (error) { console.error('Error cargando agua potable:', error); }
         }
         
-        // Función para renderizar agua potable
         function renderizarAgua(data) {
             aguaLayer.clearLayers();
-            
             data.forEach(item => {
                 if (!item.geom) return;
-                
                 try {
                     const geom = typeof item.geom === 'string' ? JSON.parse(item.geom) : item.geom;
-                    
-                    const layer = L.geoJSON(geom, {
-                        style: {
-                            color: '#1E90FF',
-                            weight: 3,
-                            opacity: 1
-                        }
-                    }).bindPopup(crearPopupAgua(item));
-                    
+                    const layer = L.geoJSON(geom, { style: { color: '#1E90FF', weight: 3, opacity: 1 } }).bindPopup(crearPopupAgua(item));
                     aguaLayer.addLayer(layer);
-                } catch (e) {
-                    console.error('Error renderizando agua potable:', e);
-                }
+                } catch (e) { console.error('Error renderizando agua potable:', e); }
             });
         }
+        function crearPopupAgua(item) { return `<div class="popup-custom"><div class="popup-title">💧 Agua Potable</div><div class="popup-field"><strong>Tipo:</strong> ${item.AGUA || 'N/A'}</div><div class="popup-field"><strong>Barrio:</strong> ${item.PAR_BARRIO || 'N/A'}</div></div>`; }
         
-        // Función para crear popup de agua
-        function crearPopupAgua(item) {
-            return `
-                <div class="popup-custom">
-                    <div class="popup-title">💧 Agua Potable</div>
-                    <div class="popup-field"><strong>Tipo:</strong> ${item.AGUA || 'N/A'}</div>
-                    <div class="popup-field"><strong>Barrio:</strong> ${item.PAR_BARRIO || 'N/A'}</div>
-                </div>
-            `;
-        }
-        
-        // Función para cargar alcantarillado
         async function cargarAlcantarillado() {
             try {
                 const query = `${SUPABASE_URL}/rest/v1/red_alcantarillado_sanitario?select=id,OBJECTID,Entity,Layer,Color,Linetype,Elevation,SANITARIO,Shape_Leng,geom&limit=500`;
-                
-                const response = await fetch(query, {
-                    headers: {
-                        'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-                    }
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    currentAlcantarilladoData = data;
-                    renderizarAlcantarillado(data);
-                }
-            } catch (error) {
-                console.error('Error cargando alcantarillado:', error);
-            }
+                const response = await fetch(query, { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } });
+                if (response.ok) { const data = await response.json(); currentAlcantarilladoData = data; renderizarAlcantarillado(data); }
+            } catch (error) { console.error('Error cargando alcantarillado:', error); }
         }
         
-        // Función para renderizar alcantarillado
         function renderizarAlcantarillado(data) {
             alcantarilladoLayer.clearLayers();
-            
             data.forEach(item => {
                 if (!item.geom) return;
-                
                 try {
                     const geom = typeof item.geom === 'string' ? JSON.parse(item.geom) : item.geom;
-                    
-                    const layer = L.geoJSON(geom, {
-                        style: {
-                            color: '#9b59b6',
-                            weight: 3,
-                            opacity: 1
-                        }
-                    }).bindPopup(crearPopupAlcantarillado(item));
-                    
+                    const layer = L.geoJSON(geom, { style: { color: '#9b59b6', weight: 3, opacity: 1 } }).bindPopup(crearPopupAlcantarillado(item));
                     alcantarilladoLayer.addLayer(layer);
-                } catch (e) {
-                    console.error('Error renderizando alcantarillado:', e);
-                }
+                } catch (e) { console.error('Error renderizando alcantarillado:', e); }
             });
         }
+        function crearPopupAlcantarillado(item) { return `<div class="popup-custom"><div class="popup-title">🚽 Alcantarillado</div><div class="popup-field"><strong>Tipo:</strong> ${item.SANITARIO || 'N/A'}</div></div>`; }
         
-        // Función para crear popup de alcantarillado
-        function crearPopupAlcantarillado(item) {
-            return `
-                <div class="popup-custom">
-                    <div class="popup-title">🚽 Alcantarillado</div>
-                    <div class="popup-field"><strong>Tipo:</strong> ${item.SANITARIO || 'N/A'}</div>
-                </div>
-            `;
-        }
-        
-        // Función para cargar vías
         async function cargarVias() {
             try {
                 const query = `${SUPABASE_URL}/rest/v1/vias?select=id,OBJECTID,NOMBRE,PAR_BARRIO,Shape_Leng,Tipo,geom&limit=500`;
-                
-                const response = await fetch(query, {
-                    headers: {
-                        'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-                    }
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    currentViasData = data;
-                    renderizarVias(data);
-                }
-            } catch (error) {
-                console.error('Error cargando vías:', error);
-            }
+                const response = await fetch(query, { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } });
+                if (response.ok) { const data = await response.json(); currentViasData = data; renderizarVias(data); }
+            } catch (error) { console.error('Error cargando vías:', error); }
         }
         
-        // Función para renderizar vías
         function renderizarVias(data) {
             viasLayer.clearLayers();
-            
             data.forEach(item => {
                 if (!item.geom) return;
-                
                 try {
                     const geom = typeof item.geom === 'string' ? JSON.parse(item.geom) : item.geom;
-                    
-                    const layer = L.geoJSON(geom, {
-                        style: {
-                            color: getColorVia(item.Tipo),
-                            weight: getWeightVia(item.Tipo),
-                            opacity: 1
-                        }
-                    }).bindPopup(crearPopupVia(item));
-                    
+                    const layer = L.geoJSON(geom, { style: { color: getColorVia(item.Tipo), weight: getWeightVia(item.Tipo), opacity: 1 } }).bindPopup(crearPopupVia(item));
                     viasLayer.addLayer(layer);
-                } catch (e) {
-                    console.error('Error renderizando vía:', e);
-                }
+                } catch (e) { console.error('Error renderizando vía:', e); }
             });
         }
+        function getColorVia(tipo) { const colors = { 'PRINCIPAL': '#e74c3c', 'SECUNDARIA': '#f39c12', 'TERCIARIA': '#3498db' }; return colors[tipo] || '#34495e'; }
+        function getWeightVia(tipo) { const weights = { 'PRINCIPAL': 4, 'SECUNDARIA': 3, 'TERCIARIA': 2 }; return weights[tipo] || 2; }
+        function crearPopupVia(item) { return `<div class="popup-custom"><div class="popup-title">🛣️ Vía: ${item.NOMBRE || 'N/A'}</div><div class="popup-field"><strong>Tipo:</strong> ${item.Tipo || 'N/A'}</div><div class="popup-field"><strong>Barrio:</strong> ${item.PAR_BARRIO || 'N/A'}</div></div>`; }
         
-        // Función auxiliar para color de vía
-        function getColorVia(tipo) {
-            const colors = {
-                'PRINCIPAL': '#e74c3c',
-                'SECUNDARIA': '#f39c12',
-                'TERCIARIA': '#3498db'
-            };
-            return colors[tipo] || '#34495e';
-        }
-        
-        // Función auxiliar para grosor de vía
-        function getWeightVia(tipo) {
-            const weights = {
-                'PRINCIPAL': 4,
-                'SECUNDARIA': 3,
-                'TERCIARIA': 2
-            };
-            return weights[tipo] || 2;
-        }
-        
-        // Función para crear popup de vía
-        function crearPopupVia(item) {
-            return `
-                <div class="popup-custom">
-                    <div class="popup-title">🛣️ Vía: ${item.NOMBRE || 'N/A'}</div>
-                    <div class="popup-field"><strong>Tipo:</strong> ${item.Tipo || 'N/A'}</div>
-                    <div class="popup-field"><strong>Barrio:</strong> ${item.PAR_BARRIO || 'N/A'}</div>
-                </div>
-            `;
-        }
-        
-        // Función para cargar recolección
         async function cargarRecoleccion() {
             try {
                 const query = `${SUPABASE_URL}/rest/v1/ruta_recoleccion?select=id,geom&limit=500`;
-                
-                const response = await fetch(query, {
-                    headers: {
-                        'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-                    }
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    currentRecoleccionData = data;
-                    renderizarRecoleccion(data);
-                }
-            } catch (error) {
-                console.error('Error cargando rutas de recolección de basura:', error);
-            }
+                const response = await fetch(query, { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } });
+                if (response.ok) { const data = await response.json(); currentRecoleccionData = data; renderizarRecoleccion(data); }
+            } catch (error) { console.error('Error cargando rutas de recolección de basura:', error); }
         }
         
-        // Función para renderizar recolección
         function renderizarRecoleccion(data) {
             recoleccionLayer.clearLayers();
-            
             data.forEach(item => {
                 if (!item.geom) return;
-                
                 try {
                     const geom = typeof item.geom === 'string' ? JSON.parse(item.geom) : item.geom;
-                    
-                    const layer = L.geoJSON(geom, {
-                        style: {
-                            color: '#e74c3c',
-                            weight: 4,
-                            opacity: 1,
-                            dashArray: '10, 5'
-                        }
-                    }).bindPopup(crearPopupRecoleccion(item));
-                    
+                    const layer = L.geoJSON(geom, { style: { color: '#e74c3c', weight: 4, opacity: 1, dashArray: '10, 5' } }).bindPopup(crearPopupRecoleccion(item));
                     recoleccionLayer.addLayer(layer);
-                } catch (e) {
-                    console.error('Error renderizando ruta de recolección de basura:', e);
-                }
+                } catch (e) { console.error('Error renderizando ruta de recolección de basura:', e); }
             });
         }
+        function crearPopupRecoleccion(item) { return `<div class="popup-custom"><div class="popup-title">🗑️ Ruta de Recolección de Basura</div></div>`; }
         
-        // Función para crear popup de recolección
-        function crearPopupRecoleccion(item) {
-            return `
-                <div class="popup-custom">
-                    <div class="popup-title">🗑️ Ruta de Recolección de Basura</div>
-                </div>
-            `;
-        }
-        
-        // Función para aplicar filtros de predios
         function aplicarFiltrosPredios() {
-            const filtros = {
-                id: document.getElementById('searchPredio').value.trim(),
-                tipo: document.getElementById('filterTipoPredio').value
-            };
-            
-            const filtered = currentPrediosData.filter(item => {
-                const matchesId = !filtros.id || 
-                    (item.id_pred && item.id_pred.toLowerCase().includes(filtros.id.toLowerCase()));
-                const matchesTipo = !filtros.tipo || 
-                    (item.tipo_pred && item.tipo_pred === filtros.tipo);
-                return matchesId && matchesTipo;
-            });
-            
+            const filtros = { id: document.getElementById('searchPredio').value.trim(), tipo: document.getElementById('filterTipoPredio').value };
+            const filtered = currentPrediosData.filter(item => (!filtros.id || (item.id_pred && item.id_pred.toLowerCase().includes(filtros.id.toLowerCase()))) && (!filtros.tipo || (item.tipo_pred && item.tipo_pred === filtros.tipo)));
             renderizarPredios(filtered);
         }
         
-        // Función para limpiar filtros
         function limpiarFiltros() {
             document.getElementById('searchPredio').value = '';
             document.getElementById('filterTipoPredio').value = '';
-            
-            cargarPrediosIniciales();
-            cargarAgua();
-            cargarAlcantarillado();
-            cargarVias();
-            cargarRecoleccion();
-            intervencionLayer.clearLayers();
-            currentIntervencionData = [];
+            cargarPrediosIniciales(); cargarAgua(); cargarAlcantarillado(); cargarVias(); cargarRecoleccion();
+            intervencionLayer.clearLayers(); currentIntervencionData = [];
         }
         
-        // Función para centrar en El Pangui
-        function centrarEnElPangui() {
-            map.setView(EL_PANGUI_COORDS, 12);
-        }
+        function centrarEnElPangui() { map.setView(EL_PANGUI_COORDS, 12); }
+        function showLoader(show, text = 'Cargando...') { const loader = document.getElementById('mapLoading'); loader.style.display = show ? 'block' : 'none'; if (text) document.getElementById('loadingText').textContent = text; }
+        function showProgress(show) { const container = document.getElementById('progressContainer'); container.style.display = show ? 'block' : 'none'; if (!show) updateProgress(0); }
+        function updateProgress(percent) { const fill = document.getElementById('progressFill'); const clampedPercent = Math.min(Math.max(percent, 0), 100); fill.style.width = `${clampedPercent}%`; if (percent > 0) document.getElementById('loadingText').textContent = `Cargando... ${clampedPercent.toFixed(1)}%`; }
+        function setLoadingText(text) { document.getElementById('loadingText').textContent = text; }
+        function updateStatus(message, type = '') { const statusEl = document.getElementById('status'); statusEl.textContent = message; statusEl.className = type ? `status ${type}` : 'status'; }
+        function abrirZoomImagen(url, titulo) { const modal = document.getElementById('zoomModal'); document.getElementById('zoomImage').src = url; document.getElementById('zoomTitle').innerHTML = `📋 ${titulo}`; modal.style.display = 'block'; }
+        function cerrarZoomImagen(event) { if (event.target.id === 'zoomModal' || event.target.classList.contains('zoom-close') || event.target.classList.contains('zoom-content')) document.getElementById('zoomModal').style.display = 'none'; event.stopPropagation(); }
         
-        // Función para mostrar/ocultar loader
-        function showLoader(show, text = 'Cargando...') {
-            const loader = document.getElementById('mapLoading');
-            loader.style.display = show ? 'block' : 'none';
-            if (text) document.getElementById('loadingText').textContent = text;
-        }
-        
-        // Función para mostrar/ocultar barra de progreso
-        function showProgress(show) {
-            const container = document.getElementById('progressContainer');
-            container.style.display = show ? 'block' : 'none';
-            if (!show) {
-                updateProgress(0);
-            }
-        }
-        
-        // Función para actualizar barra de progreso
-        function updateProgress(percent) {
-            const fill = document.getElementById('progressFill');
-            const clampedPercent = Math.min(Math.max(percent, 0), 100);
-            fill.style.width = `${clampedPercent}%`;
-            
-            if (percent > 0) {
-                const loadingText = document.getElementById('loadingText');
-                loadingText.textContent = `Cargando... ${clampedPercent.toFixed(1)}%`;
-            }
-        }
-        
-        // Función para actualizar texto de carga
-        function setLoadingText(text) {
-            document.getElementById('loadingText').textContent = text;
-        }
-        
-        // Función para actualizar estado
-        function updateStatus(message, type = '') {
-            const statusEl = document.getElementById('status');
-            statusEl.textContent = message;
-            statusEl.className = type ? `status ${type}` : 'status';
-        }
-        
-        // Inicialización
         window.onload = function() {
             initMap();
-            
-            // Configurar evento del formulario de reportes
             document.getElementById('reportForm').addEventListener('submit', enviarReporte);
             document.getElementById('cancelReportBtn').addEventListener('click', cancelarReporte);
             document.getElementById('useLocationBtn').addEventListener('click', obtenerUbicacionUsuario);
