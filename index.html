@@ -105,6 +105,15 @@
             background: linear-gradient(45deg, #f39c12, #e67e22);
         }
         
+        /* Nuevos estilos para las tarjetas de Retiro y Portal */
+        .stat-card.retiro {
+            background: linear-gradient(45deg, #2ecc71, #27ae60);
+        }
+        
+        .stat-card.portal {
+            background: linear-gradient(45deg, #e67e22, #d35400);
+        }
+        
         .controls {
             margin-bottom: 20px;
         }
@@ -166,6 +175,15 @@
         
         .btn.intervencion {
             background: linear-gradient(45deg, #f39c12, #e67e22);
+        }
+        
+        /* Nuevos botones para Retiro y Portal */
+        .btn.retiro {
+            background: linear-gradient(45deg, #2ecc71, #27ae60);
+        }
+        
+        .btn.portal {
+            background: linear-gradient(45deg, #e67e22, #d35400);
         }
         
         .btn.secondary {
@@ -649,6 +667,21 @@
             background: #95a5a6;
             color: white;
         }
+
+        /* Estilos específicos para las capas de Retiro y Portal en el mapa */
+        .retiro-layer {
+            stroke: #2ecc71 !important;
+            stroke-width: 4 !important;
+            stroke-dasharray: 8, 4 !important;
+            opacity: 0.9 !important;
+        }
+        
+        .portal-layer {
+            stroke: #e67e22 !important;
+            stroke-width: 5 !important;
+            stroke-dasharray: 12, 6 !important;
+            opacity: 0.9 !important;
+        }
     </style>
 </head>
 <body>
@@ -730,6 +763,15 @@
                         <h3 id="totalIntervenciones">0</h3>
                         <p>Intervenciones</p>
                     </div>
+                    <!-- Nuevas tarjetas para Retiro y Portal -->
+                    <div class="stat-card retiro">
+                        <h3 id="totalRetiro">0</h3>
+                        <p>Retiro 3m</p>
+                    </div>
+                    <div class="stat-card portal">
+                        <h3 id="totalPortal">0</h3>
+                        <p>Portal 2m</p>
+                    </div>
                 </div>
                 
                 <div class="layer-controls">
@@ -769,11 +811,29 @@
                             <span class="slider"></span>
                         </label>
                     </div>
+                    <!-- Nuevos toggles para Retiro y Portal -->
+                    <div class="layer-toggle">
+                        <label for="toggleRetiro">📐 Retiro 3m</label>
+                        <label class="switch">
+                            <input type="checkbox" id="toggleRetiro" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="layer-toggle">
+                        <label for="togglePortal">🚪 Portal 2m</label>
+                        <label class="switch">
+                            <input type="checkbox" id="togglePortal" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
                 </div>
                 
                 <div class="controls">
                     <button class="btn recoleccion" onclick="cargarRecoleccion()">🗑️ Cargar Rutas de Recolección</button>
                     <button class="btn intervencion" onclick="cargarIntervencionTerritorial()">🏗️ Cargar Intervenciones</button>
+                    <!-- Nuevos botones para Retiro y Portal -->
+                    <button class="btn retiro" onclick="cargarRetiro()">📐 Cargar Retiro 3m</button>
+                    <button class="btn portal" onclick="cargarPortal()">🚪 Cargar Portal 2m</button>
                     <button class="btn secondary" onclick="limpiarFiltros()">🗑️ Limpiar Filtros</button>
                     <button class="btn secondary" onclick="centrarEnElPangui()">📍 Centrar Mapa</button>
                     <button class="btn temporal-point" onclick="mostrarModalCoordenadas()">➕ Agregar Punto (UTM 17S)</button>
@@ -888,6 +948,17 @@
                 <div class="spinner"></div>
                 <p>Cargando intervenciones territoriales...</p>
             </div>
+
+            <!-- Nuevos loaders para Retiro y Portal -->
+            <div id="loadingRetiro" class="loading">
+                <div class="spinner"></div>
+                <p>Cargando líneas de retiro 3m...</p>
+            </div>
+            
+            <div id="loadingPortal" class="loading">
+                <div class="spinner"></div>
+                <p>Cargando líneas de portal 2m...</p>
+            </div>
         </div>
         
         <div class="map-container">
@@ -961,13 +1032,16 @@
         const recoleccionLayer = L.layerGroup();
         const reportesLayer = L.layerGroup();
         const intervencionLayer = L.layerGroup();
+        // Nuevas capas para Retiro y Portal
+        const retiroLayer = L.layerGroup();
+        const portalLayer = L.layerGroup();
 
         let osmLayer, satelliteLayer, terrainLayer;
         let baseLayers = {};
         
         let currentPrediosData = [], currentAguaData = [], currentAlcantarilladoData = [], 
             currentViasData = [], currentRecoleccionData = [], currentReportesData = [],
-            currentIntervencionData = [];
+            currentIntervencionData = [], currentRetiroData = [], currentPortalData = [];
         
         let loading = false, zoom = 12;
         let viewMode = 'predios';
@@ -1058,6 +1132,179 @@
             }
         }
 
+        // ========== FUNCIONES PARA RETIRO Y PORTAL (CORREGIDAS CON geom_wgs84) ==========
+        async function cargarRetiro() {
+            if (currentRetiroData.length > 0) { 
+                retiroLayer.addTo(map); 
+                document.getElementById('toggleRetiro').checked = true;
+                return; 
+            }
+            document.getElementById('loadingRetiro').style.display = 'block';
+            updateStatus('📐 Cargando líneas de retiro 3m...');
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/retiro_3m_wgs84?select=*`, { 
+                    headers: { 
+                        'apikey': SUPABASE_ANON_KEY, 
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}` 
+                    } 
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('📐 Datos de retiro_3m_wgs84:', data);
+                    if (data.length === 0) {
+                        updateStatus('⚠️ No hay datos en la tabla retiro_3m_wgs84', 'error');
+                        document.getElementById('loadingRetiro').style.display = 'none';
+                        return;
+                    }
+                    currentRetiroData = data;
+                    renderizarRetiro(data);
+                    updateStatus(`✅ ${data.length} líneas de retiro 3m cargadas`, 'success');
+                    document.getElementById('totalRetiro').textContent = data.length;
+                    document.getElementById('toggleRetiro').checked = true;
+                    retiroLayer.addTo(map);
+                } else {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+            } catch (error) {
+                console.error('Error cargando retiro 3m:', error);
+                updateStatus(`❌ Error cargando retiro 3m: ${error.message}`, 'error');
+            } finally {
+                document.getElementById('loadingRetiro').style.display = 'none';
+            }
+        }
+
+        function renderizarRetiro(data) {
+            retiroLayer.clearLayers();
+            let contador = 0;
+            data.forEach(item => {
+                // USAMOS geom_wgs84 en lugar de geom
+                let geomData = item.geom_wgs84 || item.geom || item.geojson || item.geometry || item.the_geom;
+                if (!geomData) {
+                    console.warn('⚠️ Elemento sin geometría (geom_wgs84):', item);
+                    return;
+                }
+                try {
+                    const geom = typeof geomData === 'string' ? JSON.parse(geomData) : geomData;
+                    const layer = L.geoJSON(geom, {
+                        style: {
+                            color: '#2ecc71',
+                            weight: 4,
+                            dashArray: '8, 4',
+                            opacity: 0.9,
+                            lineCap: 'round',
+                            lineJoin: 'round'
+                        }
+                    }).bindPopup(crearPopupRetiro(item));
+                    retiroLayer.addLayer(layer);
+                    contador++;
+                } catch (e) {
+                    console.error('Error renderizando retiro 3m:', e, item);
+                }
+            });
+            console.log(`✅ ${contador} líneas de retiro renderizadas`);
+        }
+
+        function crearPopupRetiro(item) {
+            let contenido = `<div class="popup-custom"><div class="popup-title">📐 Línea de Retiro 3m</div>`;
+            for (let key in item) {
+                if (key !== 'geom' && key !== 'geom_wgs84' && item[key] !== null && item[key] !== undefined && item[key] !== '') {
+                    const valor = typeof item[key] === 'number' ? item[key].toLocaleString() : item[key];
+                    contenido += `<div class="popup-field"><strong>${key}:</strong> ${valor}</div>`;
+                }
+            }
+            contenido += `<div style="margin-top:10px;padding:8px;background:#e8f8f5;border-radius:5px;border-left:4px solid #2ecc71;">
+                <small>📐 Distancia de retiro obligatoria: 3 metros desde la línea de propiedad</small>
+            </div></div>`;
+            return contenido;
+        }
+
+        async function cargarPortal() {
+            if (currentPortalData.length > 0) { 
+                portalLayer.addTo(map); 
+                document.getElementById('togglePortal').checked = true;
+                return; 
+            }
+            document.getElementById('loadingPortal').style.display = 'block';
+            updateStatus('🚪 Cargando líneas de portal 2m...');
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/portal_2m_wgs84?select=*`, { 
+                    headers: { 
+                        'apikey': SUPABASE_ANON_KEY, 
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}` 
+                    } 
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('🚪 Datos de portal_2m_wgs84:', data);
+                    if (data.length === 0) {
+                        updateStatus('⚠️ No hay datos en la tabla portal_2m_wgs84', 'error');
+                        document.getElementById('loadingPortal').style.display = 'none';
+                        return;
+                    }
+                    currentPortalData = data;
+                    renderizarPortal(data);
+                    updateStatus(`✅ ${data.length} líneas de portal 2m cargadas`, 'success');
+                    document.getElementById('totalPortal').textContent = data.length;
+                    document.getElementById('togglePortal').checked = true;
+                    portalLayer.addTo(map);
+                } else {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+            } catch (error) {
+                console.error('Error cargando portal 2m:', error);
+                updateStatus(`❌ Error cargando portal 2m: ${error.message}`, 'error');
+            } finally {
+                document.getElementById('loadingPortal').style.display = 'none';
+            }
+        }
+
+        function renderizarPortal(data) {
+            portalLayer.clearLayers();
+            let contador = 0;
+            data.forEach(item => {
+                // USAMOS geom_wgs84 en lugar de geom
+                let geomData = item.geom_wgs84 || item.geom || item.geojson || item.geometry || item.the_geom;
+                if (!geomData) {
+                    console.warn('⚠️ Elemento sin geometría (geom_wgs84):', item);
+                    return;
+                }
+                try {
+                    const geom = typeof geomData === 'string' ? JSON.parse(geomData) : geomData;
+                    const layer = L.geoJSON(geom, {
+                        style: {
+                            color: '#e67e22',
+                            weight: 5,
+                            dashArray: '12, 6',
+                            opacity: 0.9,
+                            lineCap: 'round',
+                            lineJoin: 'round'
+                        }
+                    }).bindPopup(crearPopupPortal(item));
+                    portalLayer.addLayer(layer);
+                    contador++;
+                } catch (e) {
+                    console.error('Error renderizando portal 2m:', e, item);
+                }
+            });
+            console.log(`✅ ${contador} líneas de portal renderizadas`);
+        }
+
+        function crearPopupPortal(item) {
+            let contenido = `<div class="popup-custom"><div class="popup-title">🚪 Línea de Portal 2m</div>`;
+            for (let key in item) {
+                if (key !== 'geom' && key !== 'geom_wgs84' && item[key] !== null && item[key] !== undefined && item[key] !== '') {
+                    const valor = typeof item[key] === 'number' ? item[key].toLocaleString() : item[key];
+                    contenido += `<div class="popup-field"><strong>${key}:</strong> ${valor}</div>`;
+                }
+            }
+            contenido += `<div style="margin-top:10px;padding:8px;background:#fef9e7;border-radius:5px;border-left:4px solid #e67e22;">
+                <small>🚪 Distancia de portal obligatoria: 2 metros desde la línea de fachada</small>
+            </div></div>`;
+            return contenido;
+        }
+
         // ========== TODAS LAS FUNCIONES EXISTENTES (SIN MODIFICAR NADA) ==========
         function initMap() {
             osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' });
@@ -1071,6 +1318,9 @@
             alcantarilladoLayer.addTo(map);
             viasLayer.addTo(map);
             recoleccionLayer.addTo(map);
+            // Agregar nuevas capas al mapa
+            retiroLayer.addTo(map);
+            portalLayer.addTo(map);
             
             document.getElementById('togglePredios').addEventListener('change', e => e.target.checked ? prediosLayer.addTo(map) : map.removeLayer(prediosLayer));
             document.getElementById('toggleAgua').addEventListener('change', e => e.target.checked ? aguaLayer.addTo(map) : map.removeLayer(aguaLayer));
@@ -1079,6 +1329,15 @@
             document.getElementById('toggleRecoleccion').addEventListener('change', e => e.target.checked ? recoleccionLayer.addTo(map) : map.removeLayer(recoleccionLayer));
             document.getElementById('toggleReportes').addEventListener('change', e => { if (e.target.checked && currentReportesData.length === 0) cargarReportesExistentes(); else e.target.checked ? reportesLayer.addTo(map) : map.removeLayer(reportesLayer); });
             document.getElementById('toggleIntervencion').addEventListener('change', e => { if (e.target.checked && currentIntervencionData.length === 0) cargarIntervencionTerritorial(); else e.target.checked ? intervencionLayer.addTo(map) : map.removeLayer(intervencionLayer); });
+            // Event listeners para las nuevas capas
+            document.getElementById('toggleRetiro').addEventListener('change', e => { 
+                if (e.target.checked && currentRetiroData.length === 0) cargarRetiro(); 
+                else e.target.checked ? retiroLayer.addTo(map) : map.removeLayer(retiroLayer); 
+            });
+            document.getElementById('togglePortal').addEventListener('change', e => { 
+                if (e.target.checked && currentPortalData.length === 0) cargarPortal(); 
+                else e.target.checked ? portalLayer.addTo(map) : map.removeLayer(portalLayer); 
+            });
             
             map.on('zoomend', () => { document.getElementById('currentZoom').textContent = map.getZoom(); });
             configurarEventosReportes();
@@ -1088,6 +1347,11 @@
             cargarAlcantarillado();
             cargarVias();
             cargarRecoleccion();
+            // Cargar automáticamente Retiro y Portal al iniciar
+            setTimeout(() => {
+                cargarRetiro();
+                cargarPortal();
+            }, 1000);
         }
         
         async function cargarIntervencionTerritorial() {
@@ -1399,6 +1663,9 @@
             document.getElementById('filterTipoPredio').value = '';
             cargarPrediosIniciales(); cargarAgua(); cargarAlcantarillado(); cargarVias(); cargarRecoleccion();
             intervencionLayer.clearLayers(); currentIntervencionData = [];
+            // Limpiar también Retiro y Portal
+            retiroLayer.clearLayers(); currentRetiroData = [];
+            portalLayer.clearLayers(); currentPortalData = [];
         }
         
         function centrarEnElPangui() { map.setView(EL_PANGUI_COORDS, 12); }
